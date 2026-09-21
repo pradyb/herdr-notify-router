@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Added
+- **Custom-icon desktop notifications on macOS**: the `desktop` sink accepts `notifier`, the path to a terminal-notifier binary (for example a copy built with your own icon, see the README). Titles and messages are passed as plain arguments, and values that terminal-notifier would read as syntax (a leading `-`, `[`, `(`, `{`, `<`, quote or backslash) are escaped so a workspace name like `-x` cannot break or alter the call
+
 ## [0.1.1]
 
 ### Fixed

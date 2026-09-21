@@ -294,6 +294,24 @@ def test_only_http_urls_and_missing_urls_are_refused():
         pass
 
 
+def test_desktop_notifier_gets_title_and_message_as_plain_arguments():
+    calls = []
+    with mock.patch.object(nr.subprocess, "run", lambda cmd, **kw: calls.append(cmd)):
+        nr.send({"type": "desktop", "notifier": "~/Apps/x.app/Contents/MacOS/terminal-notifier"}, "claude is blocked", "api / fix-bug", {})
+        nr.send({"type": "desktop", "notifier": "/bin/tn"}, "-x is blocked", '[team] -execute "rm -rf ~"', {})
+    assert calls[0] == [os.path.expanduser("~/Apps/x.app/Contents/MacOS/terminal-notifier"), "-title", "claude is blocked", "-message", "api / fix-bug"]
+    assert calls[1][2] == "\\-x is blocked"  # backslash-escaped: terminal-notifier strips it and shows "-x is blocked"
+    assert calls[1][4] == '\\[team] -execute "rm -rf ~"'
+    assert calls[1].count("-execute") == 0  # the text never becomes an option of its own
+
+
+def test_flagsafe_escapes_exactly_the_characters_terminal_notifier_treats_as_syntax():
+    for lead in "-[({<\"'\\":
+        assert nr._flagsafe(lead + "x") == "\\" + lead + "x", lead
+    for plain in ("claude", "api / fix", "1", " -x", "a-b"):
+        assert nr._flagsafe(plain) == plain
+
+
 def test_desktop_message_never_reaches_a_shell():
     calls = []
     evil = 'body"; do shell script "rm -rf ~"'
