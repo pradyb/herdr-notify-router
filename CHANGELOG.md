@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1]
+
+### Fixed
+- **HTTPS sinks failed with python.org Python on macOS**: that Python ships with no CA certificates, so every HTTPS request (ntfy.sh, Slack, Discord) failed with `CERTIFICATE_VERIFY_FAILED`. When the default trust store is empty the plugin now loads a system CA bundle (`certifi` if installed, then the usual system paths). Certificate verification is never disabled
+
 ## [0.2.0]
 
 ### Added

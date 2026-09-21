@@ -246,6 +246,37 @@ def test_two_sessions_with_the_same_pane_id_do_not_interfere():
         assert len(f.sent) == 4  # B's identical pane/status is not deduped against A's
 
 
+class _Ctx:
+    def __init__(self, certs, cafile=None):
+        self.certs, self.cafile = certs, cafile
+
+    def cert_store_stats(self):
+        return {"x509_ca": self.certs}
+
+
+def _fake_context(cafile=None, **kw):
+    return _Ctx(128 if cafile else 0, cafile)  # a context only has certs when it was given a bundle
+
+
+def test_empty_trust_store_falls_back_to_a_system_bundle_but_never_disables_verification():
+    present = lambda p: p in ("/etc/ssl/cert.pem", "/etc/ssl/certs/ca-certificates.crt")
+    with mock.patch.object(nr.ssl, "create_default_context", _fake_context), \
+            mock.patch.object(nr.os.path, "isfile", present), mock.patch.dict(nr.sys.modules, {"certifi": None}):
+        assert nr._ssl_context().cafile == "/etc/ssl/cert.pem"  # first bundle that exists
+    with mock.patch.object(nr.ssl, "create_default_context", _fake_context), \
+            mock.patch.object(nr.os.path, "isfile", lambda p: False), mock.patch.dict(nr.sys.modules, {"certifi": None}):
+        ctx = nr._ssl_context()
+        assert ctx.cafile is None and ctx.certs == 0  # nothing found: the strict default context, error and all
+    import ssl
+    assert ssl.create_default_context().verify_mode == ssl.CERT_REQUIRED  # the real default is strict
+
+
+def test_a_populated_default_trust_store_is_left_alone():
+    populated = lambda cafile=None, **kw: _Ctx(50, cafile)
+    with mock.patch.object(nr.ssl, "create_default_context", populated):
+        assert nr._ssl_context().cafile is None
+
+
 # --- real HTTP against a local server
 
 class Catcher(http.server.BaseHTTPRequestHandler):

@@ -11,6 +11,7 @@ import json
 import os
 import re
 import shutil
+import ssl
 import subprocess
 import sys
 import time
@@ -248,11 +249,33 @@ def _ascii(s):
     return s.encode("ascii", "replace").decode()
 
 
+def _ssl_context():
+    """python.org's macOS Python ships with no CA certificates; fall back to a system bundle.
+
+    Verification is never turned off: with no bundle found the default context (and its error) is used.
+    """
+    ctx = ssl.create_default_context()
+    if ctx.cert_store_stats()["x509_ca"]:
+        return ctx
+    bundles = []
+    try:
+        import certifi
+
+        bundles.append(certifi.where())
+    except ImportError:
+        pass
+    bundles += ["/etc/ssl/cert.pem", "/etc/ssl/certs/ca-certificates.crt", "/etc/pki/tls/certs/ca-bundle.crt"]
+    for path in bundles:
+        if os.path.isfile(path):
+            return ssl.create_default_context(cafile=path)
+    return ctx
+
+
 def _post(url, data, headers):
     if urllib.parse.urlparse(url).scheme not in ("http", "https"):
         raise ValueError("url must be http(s)")
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
-    urllib.request.urlopen(req, timeout=10).read()
+    urllib.request.urlopen(req, timeout=10, context=_ssl_context()).read()
 
 
 def webhook_payload(fmt, title, body, info):
