@@ -56,7 +56,7 @@ unless you are looking at that pane.
 | Type | Fields |
 |---|---|
 | `webhook` | `url` or `url_env`; `format` = `slack` (default), `discord` or `json` |
-| `ntfy` | `topic`; `server` (default `https://ntfy.sh`); `token` or `token_env` for a protected topic |
+| `ntfy` | `topic`; `server` (default `https://ntfy.sh`); `token` or `token_env` for a protected topic. Non-ASCII characters in the title (the agent name) are shown as `?`; the message is unaffected. |
 | `desktop` | `notifier` (optional, macOS): path to a terminal-notifier binary, for a [custom icon](#custom-icon-on-macos). Otherwise `osascript` on macOS and `notify-send` on Linux. |
 
 ```toml
@@ -153,14 +153,19 @@ to = ["team-chat"]
 ## Limits
 
 - **No Microsoft Teams.** Teams webhooks expect an Adaptive Card, which is not implemented yet.
-- **Not tested against live services.** The webhook, ntfy and desktop sinks are tested against a
-  local HTTP server and, for desktop, a real macOS notification call. They follow each service's
-  documented format but have not been run against a live Slack, Discord or ntfy server.
+- **Verified live:** the `ntfy` sink (messages published to ntfy.sh and read back, with title, body and
+  priority intact) and the `desktop` sink on macOS.
+- **Not yet verified live:** Slack and Discord webhooks, and `notify-send` on Linux. They follow each
+  service's documented format and are tested against a local HTTP server, but have not been run against a
+  real workspace or server. Run the `test` action to check your own sinks.
 - **Alerts don't contain pane content**, only the agent, workspace and tab names.
 - A pending `after` alert is a sleeping background process. It is lost if the machine restarts.
 
 ## Troubleshooting
 
+- **`certificate verify failed`:** Python from python.org on macOS has no CA certificates of its own. The
+  plugin falls back to the system bundle (`/etc/ssl/cert.pem`, or `certifi` if installed). If you still see
+  this, run the "Install Certificates.command" that comes with that Python.
 - **Nothing arrives:** `herdr plugin log list --plugin pradyb.notify-router`. Hook failures and
   sink errors (class and HTTP status only, never the URL) appear there.
 
