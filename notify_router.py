@@ -300,6 +300,11 @@ def _failure(e):
 # ----------------------------------------------------------------- routing
 
 
+def pane_key(pane):
+    """Pane ids repeat across sessions (each has its own w1:p1) but all share one state dir."""
+    return "%s\x1f%s" % (os.environ.get("HERDR_SOCKET_PATH", ""), pane)
+
+
 def message(info, waited):
     title = "%s is %s" % (info["agent"] or "agent", info["status"])
     body = "%s / %s" % (info["workspace"], info["tab"])
@@ -328,7 +333,7 @@ def deliver(cfg, rule, pane, status, waited):
         if sink is None:
             log("unknown sink %r in a rule" % name)
             continue
-        key = "%s|%s|%s" % (pane, status, name)
+        key = "%s\x1f%s\x1f%s" % (pane_key(pane), status, name)
         with state() as st:
             if time.time() - st["sent"].get(key, 0) < dedupe:
                 continue
@@ -346,7 +351,7 @@ def on_event():
     pane, status = data["pane_id"], data["agent_status"]
     token = "%s.%s" % (time.time(), os.getpid())
     with state() as st:  # any later status change for this pane supersedes pending timers
-        st["episodes"][pane] = {"status": status, "token": token, "ts": time.time()}
+        st["episodes"][pane_key(pane)] = {"status": status, "token": token, "ts": time.time()}
     cfg = load_config(pane_info(pane).get("cwd"))
     delays = set()
     for rule in cfg["rules"]:
@@ -368,7 +373,7 @@ def on_check(pane, status, token, after):
     """Timer body: alert only if the pane is still in the same status episode."""
     time.sleep(after)
     with state() as st:
-        episode = st["episodes"].get(pane)
+        episode = st["episodes"].get(pane_key(pane))
     if not episode or episode["token"] != token:
         return
     raw = pane_info(pane)

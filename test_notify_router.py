@@ -229,6 +229,23 @@ def test_a_flapping_agent_alerts_once_from_the_latest_timer_only():
         assert len(f.sent) == 2
 
 
+def test_two_sessions_with_the_same_pane_id_do_not_interfere():
+    """Every herdr session has its own w1:p1; they share one plugin state dir."""
+    with fake(RULE + "after = 60\n" + CFG) as f:
+        with mock.patch.dict(os.environ, {"HERDR_SOCKET_PATH": "/sessions/A/herdr.sock"}):
+            (argv_a,) = f.event("blocked")
+        with mock.patch.dict(os.environ, {"HERDR_SOCKET_PATH": "/sessions/B/herdr.sock"}):
+            f.event("working")  # same pane id, different session: must not cancel A's timer
+        f.status = "blocked"
+        with mock.patch.dict(os.environ, {"HERDR_SOCKET_PATH": "/sessions/A/herdr.sock"}):
+            nr.on_check(*argv_a[3:6], int(argv_a[6]))
+        assert len(f.sent) == 2  # A alerted
+        with mock.patch.dict(os.environ, {"HERDR_SOCKET_PATH": "/sessions/B/herdr.sock"}):
+            (argv_b,) = f.event("blocked")
+            nr.on_check(*argv_b[3:6], int(argv_b[6]))
+        assert len(f.sent) == 4  # B's identical pane/status is not deduped against A's
+
+
 # --- real HTTP against a local server
 
 class Catcher(http.server.BaseHTTPRequestHandler):

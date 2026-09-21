@@ -1,6 +1,6 @@
 id = "pradyb.notify-router"
 name = "Notify Router"
-version = "0.1.0"
+version = "0.1.1"
 # Only 0.9.1 has been tested. Event hooks exist since 0.7.0; lower this after testing older versions.
 min_herdr_version = "0.9.1"
 description = "Rules for agent notifications: when an alert is worth sending, and where it goes"
