@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1]
+
+### Fixed
+- **Sessions no longer interfere with each other**: pending alerts and dedupe were keyed by pane id, which repeats across herdr sessions that share one plugin state directory, so activity in one session could cancel or suppress an alert in another. State is now scoped per session
+
 ## [0.1.0]
 
 First release.
