@@ -238,6 +238,12 @@ def label(kind, ident):
 # ----------------------------------------------------------------- sinks
 
 
+def _flagsafe(s):
+    """terminal-notifier parses values as plist text (a leading - [ ( { < or quote is syntax)
+    and strips one leading backslash, so a backslash makes such a value literal."""
+    return "\\" + s if s.startswith(("-", "[", "(", "{", "<", '"', "'", "\\")) else s
+
+
 def _ascii(s):
     return s.encode("ascii", "replace").decode()
 
@@ -276,7 +282,9 @@ def send(sink, title, body, info):
             headers["Authorization"] = "Bearer " + token
         _post(url, body.encode("utf-8"), headers)
     elif kind == "desktop":
-        if sys.platform == "darwin":
+        if sink.get("notifier"):  # a terminal-notifier binary, e.g. a copy built with your own icon
+            cmd = [os.path.expanduser(sink["notifier"]), "-title", _flagsafe(title), "-message", _flagsafe(body)]
+        elif sys.platform == "darwin":
             script = "on run argv\ndisplay notification (item 1 of argv) with title (item 2 of argv)\nend run"
             cmd = ["osascript", "-e", script, body, title]  # argv, never interpolated into the script
         elif shutil.which("notify-send"):

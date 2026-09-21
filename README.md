@@ -57,7 +57,7 @@ unless you are looking at that pane.
 |---|---|
 | `webhook` | `url` or `url_env`; `format` = `slack` (default), `discord` or `json` |
 | `ntfy` | `topic`; `server` (default `https://ntfy.sh`); `token` or `token_env` for a protected topic |
-| `desktop` | none. Uses `osascript` on macOS and `notify-send` on Linux. |
+| `desktop` | `notifier` (optional, macOS): path to a terminal-notifier binary, for a [custom icon](#custom-icon-on-macos). Otherwise `osascript` on macOS and `notify-send` on Linux. |
 
 ```toml
 [sinks.team-chat]
@@ -72,6 +72,38 @@ url_env = "SLACK_WEBHOOK_URL"
 
 The `slack` payload is `{"text": ...}` with `&`, `<` and `>` escaped, so a branch or workspace name
 cannot trigger a mention. The `discord` payload disables all mentions.
+
+### Custom icon on macOS
+
+`osascript` notifications always show the Script Editor icon: macOS takes a notification's icon from
+the app that sends it, and offers no way to override it. To get your own icon, build a copy of
+[terminal-notifier](https://github.com/julienXX/terminal-notifier) that carries it (needs the Xcode
+command line tools):
+
+```sh
+git clone https://github.com/julienXX/terminal-notifier && cd terminal-notifier
+make icon ICON=~/Pictures/my-icon.png APP_NAME=herdr-notify-router
+cp -R build/herdr-notify-router.app ~/Applications/
+```
+
+Run it once **from a normal terminal** and click *Allow*, so macOS asks you for permission
+(it appears in System Settings → Notifications under the app name):
+
+```sh
+~/Applications/herdr-notify-router.app/Contents/MacOS/terminal-notifier -title test -message hello
+```
+
+Then point the sink at it:
+
+```toml
+[sinks.mac]
+type = "desktop"
+notifier = "~/Applications/herdr-notify-router.app/Contents/MacOS/terminal-notifier"
+```
+
+The plugin does not ship an icon. herdr's logo is herdr's brand asset, so if you use it, keep it on
+your own machine. terminal-notifier's own `-appIcon` and `-sender` options no longer work on modern
+macOS, so a custom app copy is the only route to a different icon.
 
 ### Rules
 
