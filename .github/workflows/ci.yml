@@ -30,3 +30,6 @@ jobs:
 
       - name: Compile
         run: python -m compileall -q .
+
+      - name: Run tests
+        run: python test_notify_router.py

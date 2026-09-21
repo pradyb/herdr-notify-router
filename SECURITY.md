@@ -24,8 +24,13 @@ You can expect an acknowledgement within **72 hours**.
 This plugin sends notifications to destinations you configure, so its sensitive data is the
 webhook URLs and tokens in your config, and any pane content included in a message.
 
-In scope: any way a value from a pane, an agent, or a shared config can inject commands or
-arguments, leak a webhook URL or token, or send data to a destination that was not configured.
+A `.herdr/notify.toml` committed to a repository is untrusted input: it may only choose rules
+(which statuses matter, delays, which of *your* sinks to use). Sinks, URLs, tokens and quiet hours
+are read only from your personal config.
+
+In scope: any way a value from a pane, an agent, or a repo config can inject commands or
+arguments, leak a webhook URL or token, add a sink or destination, or send data to a destination
+that was not configured in your personal config.
 
 Out of scope: what a sink you chose (Slack, ntfy, your own webhook, ...) does with a message,
 and vulnerabilities in herdr itself (report those to the herdr project).

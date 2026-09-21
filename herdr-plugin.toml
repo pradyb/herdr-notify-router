@@ -1,0 +1,19 @@
+id = "pradyb.notify-router"
+name = "Notify Router"
+version = "0.1.0"
+# Only 0.9.1 has been tested. Event hooks exist since 0.7.0; lower this after testing older versions.
+min_herdr_version = "0.9.1"
+description = "Rules for agent notifications: when an alert is worth sending, and where it goes"
+platforms = ["linux", "macos"]
+
+# Runs on every agent status change; the rules in notify.toml decide what to send.
+[[events]]
+on = "pane.agent_status_changed"
+command = ["python3", "notify_router.py"]
+
+# Sends a test message to every configured sink, ignoring rules and quiet hours.
+[[actions]]
+id = "test"
+title = "Send a test notification"
+contexts = ["global"]
+command = ["python3", "notify_router.py", "--test"]
