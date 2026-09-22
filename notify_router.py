@@ -19,6 +19,7 @@ import urllib.parse
 import urllib.request
 
 HERDR = os.environ.get("HERDR_BIN_PATH") or "herdr"
+VERSION = "0.2.2"
 # Used when no notify.toml has any rules: an agent stuck blocked for a minute.
 DEFAULT_RULES = [{"on": ["blocked"], "after": 60}]
 DEVNULL = subprocess.DEVNULL
@@ -271,10 +272,15 @@ def _ssl_context():
     return ctx
 
 
+USER_AGENT = "herdr-notify-router (https://github.com/pradyb/herdr-notify-router, %s)" % VERSION
+
+
 def _post(url, data, headers):
     if urllib.parse.urlparse(url).scheme not in ("http", "https"):
         raise ValueError("url must be http(s)")
-    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    # Some targets (Discord's Cloudflare front, at least) reject urllib's default
+    # User-Agent as bot traffic (HTTP 403 before the request reaches the app).
+    req = urllib.request.Request(url, data=data, headers=dict(headers, **{"User-Agent": USER_AGENT}), method="POST")
     urllib.request.urlopen(req, timeout=10, context=_ssl_context()).read()
 
 

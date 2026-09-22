@@ -299,6 +299,16 @@ def _server():
     return srv, "http://127.0.0.1:%d" % srv.server_port
 
 
+def test_every_post_carries_a_descriptive_user_agent():
+    srv, base = _server()
+    nr.send({"type": "webhook", "url": base + "/hook", "format": "json"}, "t", "b", {})
+    nr.send({"type": "ntfy", "server": base, "topic": "t"}, "t", "b", {"status": "blocked"})
+    srv.shutdown()
+    for _path, headers, _body in Catcher.seen:
+        ua = headers["User-Agent"]
+        assert ua.startswith("herdr-notify-router") and "urllib" not in ua.lower(), ua
+
+
 def test_webhook_and_ntfy_really_post():
     srv, base = _server()
     info = {"agent": "claude", "status": "blocked", "pane_id": "w1:p1", "workspace": "api", "tab": "t"}
