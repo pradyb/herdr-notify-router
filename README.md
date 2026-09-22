@@ -153,11 +153,9 @@ to = ["team-chat"]
 ## Limits
 
 - **No Microsoft Teams.** Teams webhooks expect an Adaptive Card, which is not implemented yet.
-- **Verified live:** the `ntfy` sink (messages published to ntfy.sh and read back, with title, body and
-  priority intact) and the `desktop` sink on macOS.
-- **Not yet verified live:** Slack and Discord webhooks, and `notify-send` on Linux. They follow each
-  service's documented format and are tested against a local HTTP server, but have not been run against a
-  real workspace or server. Run the `test` action to check your own sinks.
+- **Verified live:** the `ntfy` sink, the `desktop` sink on macOS, and the `webhook` sink's `slack` and
+  `discord` formats (each delivered to a real webhook).
+- **Not yet verified live:** `notify-send` on Linux. Run the `test` action to check your own sinks.
 - **Alerts don't contain pane content**, only the agent, workspace and tab names.
 - A pending `after` alert is a sleeping background process. It is lost if the machine restarts.
 

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2]
+
+### Fixed
+- **Discord webhooks were rejected with 403**: `_post()` sent no `User-Agent` header, and Discord's Cloudflare front blocks the default `Python-urllib/...` value as bot traffic. Every outbound request (`webhook` and `ntfy` sinks) now carries a descriptive `User-Agent`
+
 ## [0.2.1]
 
 ### Fixed
