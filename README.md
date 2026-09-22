@@ -117,6 +117,7 @@ on = ["blocked"]          # agent statuses that trigger it
 after = 120               # seconds the agent must still be in that status (default 0 = at once)
 skip_if_focused = true    # don't alert for the pane you are looking at (default true)
 to = ["phone", "mac"]     # which sinks (default: all of them)
+include_pane_lines = 0    # last N lines of real terminal output, appended to the alert (default 0 = off)
 ```
 
 Statuses come from herdr: `idle`, `working`, `blocked`, `done` and `unknown`. Only
@@ -127,6 +128,12 @@ returns to the same status: only the latest episode alerts.
 
 `skip_if_focused` uses herdr's one focused pane. herdr always has one, even when no client is
 attached, so it cannot tell whether anyone is actually watching.
+
+`include_pane_lines` is **off by default and sends raw pane text to whatever sink the rule
+targets**. It can contain anything that was on screen — file contents, secrets pasted into a
+terminal, an agent's full output. Only turn it on for a sink you trust with that (for example your
+own desktop notification, not a shared Slack channel). If herdr can't read the pane, the alert is
+still sent, just without the extra text.
 
 ### Settings (personal config only)
 
@@ -159,7 +166,8 @@ to = ["team-chat"]
 - **No Microsoft Teams.** Teams webhooks expect an Adaptive Card, which is not implemented yet.
 - **`notify-send` on Linux has not been verified against a real Linux desktop** (everything else has —
   see the note under Sinks below). Run the `test` action to check it on your machine.
-- **Alerts don't contain pane content**, only the agent, workspace and tab names.
+- **Alerts don't contain pane content by default** — only the agent, workspace and tab names. Opt in
+  with a rule's `include_pane_lines`, but see the warning under [Rules](#rules) first.
 - A pending `after` alert is a sleeping background process. It is lost if the machine restarts.
 
 ## Troubleshooting

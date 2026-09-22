@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 
 HERDR = os.environ.get("HERDR_BIN_PATH") or "herdr"
-VERSION = "0.2.2"
+VERSION = "0.3.0"  # keep in sync with herdr-plugin.toml's version (only used in the User-Agent string)
 # Used when no notify.toml has any rules: an agent stuck blocked for a minute.
 DEFAULT_RULES = [{"on": ["blocked"], "after": 60}]
 DEVNULL = subprocess.DEVNULL
@@ -164,6 +164,7 @@ def _rule(r):
         "after": max(0, int(r.get("after", 0))),
         "skip_if_focused": bool(r.get("skip_if_focused", True)),
         "to": r.get("to"),
+        "include_pane_lines": max(0, int(r.get("include_pane_lines", 0))),
     }
 
 
@@ -231,6 +232,32 @@ def herdr_json(*args):
 
 def pane_info(pane):
     return herdr_json("pane", "get", pane)["pane"]
+
+
+MAX_PANE_CHARS = 1200  # keeps title + body well under Discord's 2000-char content limit
+
+
+def pane_read(pane, lines):
+    """Last N lines of real terminal output, or None if herdr can't read it right now.
+
+    Unlike every other herdr subcommand, `pane read` prints plain text straight to
+    stdout, not the usual {"result": ...} JSON envelope -- so this bypasses herdr_json().
+    """
+    try:
+        p = subprocess.run([HERDR, "pane", "read", pane, "--source", "recent", "--lines", str(lines), "--format", "text"],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=15)
+        if p.returncode != 0:
+            raise RuntimeError((p.stderr or p.stdout).strip() or "pane read failed")
+        text = p.stdout
+    except Exception as e:  # noqa: BLE001  (pane closed, herdr error, ...): degrade, don't fail the alert
+        log("pane read failed: %s" % _failure(e))
+        return None
+    text = text.strip()
+    if not text:
+        return None
+    if len(text) > MAX_PANE_CHARS:
+        text = "…" + text[-MAX_PANE_CHARS:]
+    return text
 
 
 def label(kind, ident):
@@ -342,11 +369,13 @@ def pane_key(pane):
     return "%s\x1f%s" % (os.environ.get("HERDR_SOCKET_PATH", ""), pane)
 
 
-def message(info, waited):
+def message(info, waited, pane_text=None):
     title = "%s is %s" % (info["agent"] or "agent", info["status"])
     body = "%s / %s" % (info["workspace"], info["tab"])
     if waited:
         body += " · for %s" % ("%d min" % (waited // 60) if waited >= 60 else "%d s" % waited)
+    if pane_text:
+        body += "\n\n" + pane_text
     return title, body
 
 
@@ -363,7 +392,8 @@ def deliver(cfg, rule, pane, status, waited):
         "workspace": label("workspace", raw["workspace_id"]),
         "tab": label("tab", raw["tab_id"]),
     }
-    title, body = message(info, waited)
+    pane_text = pane_read(pane, rule["include_pane_lines"]) if rule["include_pane_lines"] else None
+    title, body = message(info, waited, pane_text)
     dedupe = int(cfg["settings"].get("dedupe_seconds", 300))
     for name in rule["to"] or list(cfg["sinks"]):
         sink = cfg["sinks"].get(name)
