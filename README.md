@@ -53,6 +53,10 @@ unless you are looking at that pane.
 
 ### Sinks (personal config only)
 
+Verified against real services: `ntfy` (published to ntfy.sh and read back), macOS `desktop`, and the
+`webhook` sink's `slack` and `discord` formats (each delivered to a real webhook). `notify-send` on Linux
+is untested — see [Limits](#limits).
+
 | Type | Fields |
 |---|---|
 | `webhook` | `url` or `url_env`; `format` = `slack` (default), `discord` or `json` |
@@ -153,9 +157,8 @@ to = ["team-chat"]
 ## Limits
 
 - **No Microsoft Teams.** Teams webhooks expect an Adaptive Card, which is not implemented yet.
-- **Verified live:** the `ntfy` sink, the `desktop` sink on macOS, and the `webhook` sink's `slack` and
-  `discord` formats (each delivered to a real webhook).
-- **Not yet verified live:** `notify-send` on Linux. Run the `test` action to check your own sinks.
+- **`notify-send` on Linux has not been verified against a real Linux desktop** (everything else has —
+  see the note under Sinks below). Run the `test` action to check it on your machine.
 - **Alerts don't contain pane content**, only the agent, workspace and tab names.
 - A pending `after` alert is a sleeping background process. It is lost if the machine restarts.
 
