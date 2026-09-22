@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 
 HERDR = os.environ.get("HERDR_BIN_PATH") or "herdr"
-VERSION = "0.3.0"  # keep in sync with herdr-plugin.toml's version (only used in the User-Agent string)
+VERSION = "0.3.1"  # keep in sync with herdr-plugin.toml's version (only used in the User-Agent string)
 # Used when no notify.toml has any rules: an agent stuck blocked for a minute.
 DEFAULT_RULES = [{"on": ["blocked"], "after": 60}]
 DEVNULL = subprocess.DEVNULL

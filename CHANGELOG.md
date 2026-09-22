@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1]
+
+### Changed
+- The test action's menu title now reads "Send a test notification (all sinks)", making clear it tests every configured sink at once rather than one at a time
+
 ## [0.3.0]
 
 ### Added
