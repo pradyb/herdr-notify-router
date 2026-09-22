@@ -277,6 +277,57 @@ def test_a_populated_default_trust_store_is_left_alone():
         assert nr._ssl_context().cafile is None
 
 
+def test_include_pane_lines_defaults_off_and_never_calls_pane_read_when_unset():
+    with fake(RULE + CFG) as f:  # RULE has no include_pane_lines
+        with mock.patch.object(nr, "pane_read", lambda *a: (_ for _ in ()).throw(AssertionError("must not be called"))):
+            f.event("blocked")
+        assert f.sent[0][2] == "api / fix-bug"  # body unchanged: no pane text appended
+
+
+def test_include_pane_lines_appends_real_pane_text_with_the_configured_line_count():
+    calls = []
+    with fake(RULE + "include_pane_lines = 5\n" + CFG) as f:
+        with mock.patch.object(nr, "pane_read", lambda pane, lines: calls.append((pane, lines)) or "line1\nline2"):
+            f.event("blocked")
+    assert calls == [("w1:p1", 5)]
+    assert f.sent[0][2] == "api / fix-bug\n\nline1\nline2"
+
+
+def test_pane_read_failure_degrades_instead_of_losing_the_alert():
+    with fake(RULE + "include_pane_lines = 5\n" + CFG) as f:
+        with mock.patch.object(nr, "pane_read", lambda *a: None):  # herdr couldn't read it
+            f.event("blocked")
+    assert len(f.sent) == 2 and f.sent[0][2] == "api / fix-bug"  # alert still goes out, just without pane text
+
+
+class _Proc:
+    def __init__(self, returncode=0, stdout="", stderr=""):
+        self.returncode, self.stdout, self.stderr = returncode, stdout, stderr
+
+
+def test_pane_read_calls_herdr_with_the_documented_flags():
+    # unlike every other herdr subcommand, `pane read` prints plain text, not a JSON envelope
+    calls = []
+    with mock.patch.object(nr.subprocess, "run", lambda argv, **kw: calls.append(argv) or _Proc(stdout=" hello \n")):
+        assert nr.pane_read("w1:p1", 7) == "hello"
+    assert calls == [[nr.HERDR, "pane", "read", "w1:p1", "--source", "recent", "--lines", "7", "--format", "text"]]
+
+
+def test_pane_read_returns_none_on_error_or_empty_output():
+    with mock.patch.object(nr.subprocess, "run", lambda argv, **kw: _Proc(returncode=1, stderr="pane w9:p9 not found")):
+        assert nr.pane_read("w9:p9", 5) is None
+    with mock.patch.object(nr.subprocess, "run", lambda argv, **kw: _Proc(stdout="   \n  ")):
+        assert nr.pane_read("w1:p1", 5) is None
+
+
+def test_pane_read_truncates_oversized_output_and_never_grows_unbounded():
+    huge = "x" * (nr.MAX_PANE_CHARS * 3)
+    with mock.patch.object(nr.subprocess, "run", lambda argv, **kw: _Proc(stdout=huge)):
+        out = nr.pane_read("w1:p1", 500)
+    assert out.startswith("…") and len(out) == nr.MAX_PANE_CHARS + 1
+    assert out[1:] == huge[-nr.MAX_PANE_CHARS:]  # keeps the END (most recent output), not the start
+
+
 # --- real HTTP against a local server
 
 class Catcher(http.server.BaseHTTPRequestHandler):

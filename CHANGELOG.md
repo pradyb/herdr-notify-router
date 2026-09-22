@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0]
+
+### Added
+- **`include_pane_lines` rule field** (opt-in, off by default): appends the last N lines of a pane's real terminal output to the alert body. Truncated to a safe length and degrades silently (alert still sent, just without the extra text) if herdr can't read the pane. Documented as sending raw, potentially sensitive text to whatever sink the rule targets
+
 ## [0.2.2]
 
 ### Fixed

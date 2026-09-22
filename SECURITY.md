@@ -26,7 +26,9 @@ webhook URLs and tokens in your config, and any pane content included in a messa
 
 A `.herdr/notify.toml` committed to a repository is untrusted input: it may only choose rules
 (which statuses matter, delays, which of *your* sinks to use). Sinks, URLs, tokens and quiet hours
-are read only from your personal config.
+are read only from your personal config. A rule field worth knowing about here: `include_pane_lines`
+sends raw terminal text to whatever sink the rule targets, and a repo's `.herdr/notify.toml` can turn
+it on — it just can't point that text anywhere except a sink you already configured yourself.
 
 In scope: any way a value from a pane, an agent, or a repo config can inject commands or
 arguments, leak a webhook URL or token, add a sink or destination, or send data to a destination
