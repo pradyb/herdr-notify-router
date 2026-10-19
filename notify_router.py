@@ -237,7 +237,7 @@ def state():
 
 
 def herdr_json(*args):
-    p = subprocess.run([HERDR, *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=15)
+    p = subprocess.run([HERDR, *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", errors="replace", timeout=15)
     if p.returncode != 0:
         raise RuntimeError((p.stderr or p.stdout).strip() or "herdr %s failed" % " ".join(args))
     return json.loads(p.stdout)["result"]
@@ -258,7 +258,7 @@ def pane_read(pane, lines):
     """
     try:
         p = subprocess.run([HERDR, "pane", "read", pane, "--source", "recent", "--lines", str(lines), "--format", "text"],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=15)
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", errors="replace", timeout=15)
         if p.returncode != 0:
             raise RuntimeError((p.stderr or p.stdout).strip() or "pane read failed")
         text = p.stdout
