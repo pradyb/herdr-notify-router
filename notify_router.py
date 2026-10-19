@@ -34,8 +34,8 @@ except ImportError:  # Windows
     def lock(f, block=True):
         msvcrt.locking(f.fileno(), msvcrt.LK_LOCK if block else msvcrt.LK_NBLCK, 1)
 
-# Detach a child from herdr's process tree: new session on POSIX, DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP on Windows.
-DETACH = {"creationflags": 0x208} if os.name == "nt" else {"start_new_session": True}
+# Detach a child from herdr's process tree: new session on POSIX, CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP on Windows (hidden console, so child herdr calls do not flash windows).
+DETACH = {"creationflags": 0x08000200} if os.name == "nt" else {"start_new_session": True}
 
 # ----------------------------------------------------------------- config
 
