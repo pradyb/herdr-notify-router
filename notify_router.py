@@ -6,7 +6,6 @@ notify.toml (see README.md). Standard library only (Python 3.8+).
 """
 import contextlib
 import datetime
-import fcntl
 import json
 import os
 import re
@@ -23,6 +22,20 @@ VERSION = "0.3.1"  # keep in sync with herdr-plugin.toml's version (only used in
 # Used when no notify.toml has any rules: an agent stuck blocked for a minute.
 DEFAULT_RULES = [{"on": ["blocked"], "after": 60}]
 DEVNULL = subprocess.DEVNULL
+
+try:
+    import fcntl
+
+    def lock(f, block=True):
+        fcntl.flock(f, fcntl.LOCK_EX | (0 if block else fcntl.LOCK_NB))
+except ImportError:  # Windows
+    import msvcrt
+
+    def lock(f, block=True):
+        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK if block else msvcrt.LK_NBLCK, 1)
+
+# Detach a child from herdr's process tree: new session on POSIX, DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP on Windows.
+DETACH = {"creationflags": 0x208} if os.name == "nt" else {"start_new_session": True}
 
 # ----------------------------------------------------------------- config
 
@@ -201,8 +214,8 @@ def state():
     """Locked, persistent {episodes, sent}. Several hooks can run at once."""
     d = state_dir()
     os.makedirs(d, exist_ok=True)
-    with open(os.path.join(d, "state.lock"), "w") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with open(os.path.join(d, "state.lock"), "w") as lock_f:
+        lock(lock_f)
         path = os.path.join(d, "state.json")
         try:
             with open(path) as f:
@@ -338,16 +351,27 @@ def send(sink, title, body, info):
             headers["Authorization"] = "Bearer " + token
         _post(url, body.encode("utf-8"), headers)
     elif kind == "desktop":
+        env = None
         if sink.get("notifier"):  # a terminal-notifier binary, e.g. a copy built with your own icon
             cmd = [os.path.expanduser(sink["notifier"]), "-title", _flagsafe(title), "-message", _flagsafe(body)]
         elif sys.platform == "darwin":
             script = "on run argv\ndisplay notification (item 1 of argv) with title (item 2 of argv)\nend run"
             cmd = ["osascript", "-e", script, body, title]  # argv, never interpolated into the script
+        elif os.name == "nt":
+            # title/body travel in the environment, never interpolated into the script
+            ps = ("$n=[Windows.UI.Notifications.ToastNotificationManager,Windows.UI.Notifications,ContentType=WindowsRuntime];"
+                  "$x=$n::GetTemplateContent('ToastText02');$t=$x.GetElementsByTagName('text');"
+                  "[void]$t.Item(0).AppendChild($x.CreateTextNode($env:HERDR_NOTIFY_TITLE));"
+                  "[void]$t.Item(1).AppendChild($x.CreateTextNode($env:HERDR_NOTIFY_BODY));"
+                  "$n::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe')"
+                  ".Show([Windows.UI.Notifications.ToastNotification]::new($x))")
+            cmd = ["powershell.exe", "-NoProfile", "-Command", ps]
+            env = dict(os.environ, HERDR_NOTIFY_TITLE=title, HERDR_NOTIFY_BODY=body)
         elif shutil.which("notify-send"):
             cmd = ["notify-send", "--", title, body]
         else:
-            raise RuntimeError("no desktop notifier (needs osascript or notify-send)")
-        subprocess.run(cmd, stdout=DEVNULL, stderr=DEVNULL, check=True, timeout=10)
+            raise RuntimeError("no desktop notifier (needs osascript, notify-send or Windows PowerShell)")
+        subprocess.run(cmd, stdout=DEVNULL, stderr=DEVNULL, check=True, timeout=10, env=env)
     else:
         raise ValueError("sink type must be webhook, ntfy or desktop")
 
@@ -432,7 +456,7 @@ def on_event():
         # ponytail: one sleeping process per pending alert; a scheduler daemon if that ever matters
         subprocess.Popen(
             [sys.executable, os.path.abspath(__file__), "--check", pane, status, token, str(after)],
-            stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL, start_new_session=True,
+            stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL, **DETACH,
         )
 
 

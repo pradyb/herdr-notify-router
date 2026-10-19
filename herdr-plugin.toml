@@ -4,7 +4,7 @@ version = "0.3.1"
 # Only 0.9.1 has been tested. Event hooks exist since 0.7.0; lower this after testing older versions.
 min_herdr_version = "0.9.1"
 description = "Rules for agent notifications: when an alert is worth sending, and where it goes"
-platforms = ["linux", "macos"]
+platforms = ["linux", "macos", "windows"]
 
 # Runs on every agent status change; the rules in notify.toml decide what to send.
 [[events]]
