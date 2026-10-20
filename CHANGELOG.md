@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0]
+
+### Added
+- **Windows support**: file locking via `msvcrt`, the background process is detached without flashing console windows, and desktop notifications use a PowerShell toast
+- herdr output is decoded as UTF-8 on every platform (Windows defaults to cp1252)
+
 ## [0.3.1]
 
 ### Changed
